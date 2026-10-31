@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doodle Guess</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #20212a; background: #f4f5f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 28px 16px 40px; }
+    main { width: min(100%, 920px); margin: auto; }
+    h1 { margin: 0 0 6px; font-size: 1.8rem; }
+    .intro { margin: 0 0 22px; color: #626575; }
+    .layout { display: grid; grid-template-columns: minmax(0, 512px) minmax(220px, 1fr); gap: 22px; align-items: start; }
+    .panel { background: white; border: 1px solid #e2e4eb; border-radius: 14px; padding: 18px; box-shadow: 0 5px 18px #20212a0a; }
+    h2 { margin: 0 0 12px; font-size: 1rem; }
+    .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
+    .choice { min-height: 46px; border: 1px solid #d9dbe4; border-radius: 9px; background: white; color: inherit; font: inherit; font-weight: 650; cursor: pointer; }
+    .choice:hover { border-color: #6265df; }
+    .choice.selected { border-color: #5659db; background: #efefff; color: #4144bd; box-shadow: inset 0 0 0 1px #5659db; }
+    .canvas-wrap { width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #d4d6df; border-radius: 8px; background: white; touch-action: none; }
+    canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+    .actions { display: flex; gap: 10px; margin-top: 13px; }
+    .action { min-height: 42px; padding: 0 15px; border: 0; border-radius: 9px; font: inherit; font-weight: 650; cursor: pointer; }
+    .primary { flex: 1; background: #5659db; color: white; }
+    .primary:disabled { background: #b5b6c7; cursor: not-allowed; }
+    .secondary { background: #ececf2; color: #30313b; }
+    .hint, .status { margin: 13px 0 0; color: #656777; font-size: .9rem; line-height: 1.45; }
+    .result { margin-top: 14px; padding: 14px; border-radius: 10px; background: #f5f5fa; }
+    .result-label { display: block; color: #686a78; font-size: .82rem; }
+    .guess { margin: 4px 0 14px; font-size: 1.28rem; font-weight: 750; }
+    .score { margin: 4px 0 0; color: #4144bd; font-size: 2rem; font-weight: 800; }
+    .error { color: #a22b32; }
+    @media (max-width: 720px) { body { padding: 20px 12px 32px; } .layout { grid-template-columns: 1fr; } .panel { padding: 14px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Doodle Guess</h1>
+    <p class="intro">Pick one of three random categories, draw it, and see what the AI recognizes.</p>
+    <div class="layout">
+      <section class="panel">
+        <h2>What will you draw?</h2>
+        <div id="choices" class="choices" aria-label="Choose a category"></div>
+        <div class="canvas-wrap"><canvas id="canvas" width="512" height="512" aria-label="512 by 512 drawing canvas"></canvas></div>
+        <div class="actions">
+          <button id="clear" class="action secondary" type="button">Clear</button>
+          <button id="new-round" class="action primary" type="button">New round</button>
+        </div>
+        <p id="status" class="status" aria-live="polite">Loading available categories…</p>
+      </section>
+      <aside class="panel">
+        <h2>AI result</h2>
+        <p id="result-hint" class="hint">Choose a category and start drawing. The AI checks your sketch after you pause.</p>
+        <div class="result" aria-live="polite">
+          <span class="result-label">AI's best guess</span>
+          <p id="guess" class="guess">—</p>
+          <span class="result-label">Probability your drawing matches <span id="target-name">the chosen category</span></span>
+          <p id="score" class="score">—</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <script>
+    const canvas = document.querySelector('#canvas');
+    const ctx = canvas.getContext('2d');
+    const choicesNode = document.querySelector('#choices');
+    const statusNode = document.querySelector('#status');
+    const guessNode = document.querySelector('#guess');
+    const scoreNode = document.querySelector('#score');
+    const targetNameNode = document.querySelector('#target-name');
+    const resultHintNode = document.querySelector('#result-hint');
+    const clearButton = document.querySelector('#clear');
+    const newRoundButton = document.querySelector('#new-round');
+    let categories = [];
+    let options = [];
+    let target = null;
+    let drawing = false;
+    let hasDrawing = false;
+    let predictionTimer = null;
+    let requestNumber = 0;
+
+    function clearCanvas() {
+      requestNumber++;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      hasDrawing = false;
+      guessNode.textContent = '—';
+      scoreNode.textContent = '—';
+      resultHintNode.textContent = target ? `Draw a ${target}; the AI checks your sketch after you pause.` : 'Choose a category and start drawing.';
+      clearTimeout(predictionTimer);
+    }
+
+    function makeRound() {
+      const shuffled = [...categories];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      options = shuffled.slice(0, 3);
+      target = null;
+      choicesNode.replaceChildren(...options.map((category) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'choice';
+        button.textContent = category;
+        button.addEventListener('click', () => selectTarget(category, button));
+        return button;
+      }));
+      targetNameNode.textContent = 'the chosen category';
+      clearCanvas();
+      statusNode.classList.remove('error');
+      statusNode.textContent = 'Select one of the three categories to begin.';
+    }
+
+    function selectTarget(category, selectedButton) {
+      target = category;
+      choicesNode.querySelectorAll('.choice').forEach((button) => button.classList.remove('selected'));
+      selectedButton.classList.add('selected');
+      targetNameNode.textContent = category;
+      clearCanvas();
+      statusNode.classList.remove('error');
+      statusNode.textContent = `Draw a ${category} on the canvas.`;
+    }
+
+    function pointFromEvent(event) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: (event.clientX - rect.left) * canvas.width / rect.width,
+               y: (event.clientY - rect.top) * canvas.height / rect.height };
+    }
+
+    canvas.addEventListener('pointerdown', (event) => {
+      if (!target) { statusNode.textContent = 'Select a category before drawing.'; return; }
+      drawing = true;
+      canvas.setPointerCapture(event.pointerId);
+      const point = pointFromEvent(event);
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y);
+      ctx.lineTo(point.x + 0.1, point.y + 0.1);
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      hasDrawing = true;
+      schedulePrediction();
+    });
+
+    canvas.addEventListener('pointermove', (event) => {
+      if (!drawing) return;
+      const point = pointFromEvent(event);
+      ctx.lineTo(point.x, point.y);
+      ctx.stroke();
+      schedulePrediction();
+    });
+
+    function finishStroke() { drawing = false; }
+    canvas.addEventListener('pointerup', finishStroke);
+    canvas.addEventListener('pointercancel', finishStroke);
+
+    async function predict() {
+      if (!target || !hasDrawing) return;
+      const thisRequest = ++requestNumber;
+      statusNode.textContent = 'The AI is looking at your doodle…';
+      try {
+        const response = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target, image: canvas.toDataURL('image/png') })
+        });
+        const result = await response.json();
+        if (thisRequest !== requestNumber) return;
+        if (!response.ok) throw new Error(result.error || 'Prediction failed');
+        guessNode.textContent = `${result.guess} (${(result.guess_probability * 100).toFixed(1)}%)`;
+        scoreNode.textContent = `${(result.score * 100).toFixed(1)}%`;
+        resultHintNode.textContent = `Your score is the model's probability for ${target}.`;
+        statusNode.textContent = `AI guessed ${result.guess}; ${target} confidence is ${(result.score * 100).toFixed(1)}%.`;
+      } catch (error) {
+        if (thisRequest !== requestNumber) return;
+        statusNode.textContent = error.message;
+        statusNode.classList.add('error');
+      }
+    }
+
+    function schedulePrediction() {
+      clearTimeout(predictionTimer);
+      statusNode.classList.remove('error');
+      predictionTimer = setTimeout(predict, 1500);
+    }
+
+    clearButton.addEventListener('click', () => {
+      clearCanvas();
+      statusNode.textContent = target ? `Canvas cleared. Draw a ${target}.` : 'Canvas cleared. Choose a category to begin.';
+    });
+    newRoundButton.addEventListener('click', makeRound);
+
+    fetch('/api/categories')
+      .then((response) => response.json().then((result) => ({ response, result })))
+      .then(({ response, result }) => {
+        if (!response.ok) throw new Error(result.error || 'Could not load categories');
+        categories = result.categories;
+        if (categories.length < 3) throw new Error('Train a model with at least three categories to play.');
+        makeRound();
+      })
+      .catch((error) => {
+        statusNode.textContent = error.message;
+        statusNode.classList.add('error');
+      });
+
+    clearCanvas();
+  </script>
+</body>
+</html>

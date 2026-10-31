@@ -91,26 +91,39 @@ class QuickDrawBitmaps(Dataset):
         return image, label
 
 
-class DoodleCNN(nn.Module):
-    """Compact convolutional classifier for 28x28 grayscale doodles."""
+class DoodleVGG6(nn.Module):
+    """Six-convolution VGG-style classifier for 28x28 grayscale doodles."""
 
     def __init__(self, num_classes: int) -> None:
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2),
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2),
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((3, 3)),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
+            nn.AdaptiveAvgPool2d((2, 2)),
         )
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Dropout(0.25),
-            nn.Linear(128 * 3 * 3, 256),
+            nn.Dropout(0.3),
+            nn.Linear(128 * 2 * 2, 256),
             nn.ReLU(inplace=True),
             nn.Dropout(0.25),
             nn.Linear(256, num_classes),
@@ -202,7 +215,7 @@ def train(args: argparse.Namespace) -> None:
     validation_loader = DataLoader(
         validation_set, batch_size=args.batch_size, shuffle=False, num_workers=args.workers
     )
-    model = DoodleCNN(num_classes=len(class_files)).to(device)
+    model = DoodleVGG6(num_classes=len(class_files)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     loss_function = nn.CrossEntropyLoss()
     best_accuracy = -1.0
@@ -281,7 +294,7 @@ def _prepare_image(image_path: Path) -> torch.Tensor:
 def predict(args: argparse.Namespace) -> None:
     checkpoint = torch.load(args.model, map_location="cpu", weights_only=False)
     categories = checkpoint["classes"]
-    model = DoodleCNN(len(categories))
+    model = DoodleVGG6(len(categories))
     model.load_state_dict(checkpoint["model_state"])
     model.eval()
     image = _prepare_image(args.image)
@@ -309,7 +322,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     train_parser.add_argument("--download", action="store_true", help="download missing .npy files")
     train_parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
-    train_parser.add_argument("--epochs", type=int, default=30)
+    train_parser.add_argument("--epochs", type=int, default=5)
     train_parser.add_argument("--batch-size", type=int, default=128)
     train_parser.add_argument("--learning-rate", type=float, default=1e-3)
     train_parser.add_argument("--max-per-class", type=int, default=10_000)

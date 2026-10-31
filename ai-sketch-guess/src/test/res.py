@@ -16,7 +16,7 @@ PROJECT_ROOT = SRC_DIR.parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from guess.guess import DoodleCNN  # noqa: E402
+from guess.guess import DoodleVGG6  # noqa: E402
 
 
 DEFAULT_MODEL = PROJECT_ROOT / "doodle_cnn.pt"
@@ -50,14 +50,17 @@ class DoodlePredictor:
         checkpoint = torch.load(model_path, map_location="cpu", weights_only=False)
         self.classes: list[str] = checkpoint["classes"]
         self.top_k = max(1, min(top_k, len(self.classes)))
-        self.model = DoodleCNN(num_classes=len(self.classes))
+        self.model = DoodleVGG6(num_classes=len(self.classes))
         self.model.load_state_dict(checkpoint["model_state"])
         self.model.eval()
 
     @torch.inference_mode()
-    def predict(self, image: Image.Image) -> list[tuple[str, float]]:
+    def predict(
+        self, image: Image.Image, top_k: int | None = None
+    ) -> list[tuple[str, float]]:
         probabilities = torch.softmax(self.model(prepare_canvas_image(image)), dim=1)[0]
-        scores, indexes = torch.topk(probabilities, self.top_k)
+        count = self.top_k if top_k is None else max(1, min(top_k, len(self.classes)))
+        scores, indexes = torch.topk(probabilities, count)
         return [
             (self.classes[index], float(score))
             for score, index in zip(scores.tolist(), indexes.tolist())

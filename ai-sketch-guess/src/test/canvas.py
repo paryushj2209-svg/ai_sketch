@@ -1,139 +1,124 @@
-"""A 512x512 doodle pad that prints model predictions every 1.5 seconds."""
+"""Serve the browser doodle game and the existing PyTorch classifier."""
 
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import io
+import json
 from pathlib import Path
-import tkinter as tk
+from typing import Any
+from urllib.parse import urlparse
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from res import DEFAULT_MODEL, DoodlePredictor
 
 
-CANVAS_SIZE = 512
-PREDICTION_INTERVAL_MS = 1500
-INK_WIDTH = 8
+PAGE = Path(__file__).with_name("index.html")
+MAX_REQUEST_BYTES = 4 * 1024 * 1024
 
 
-class DoodleCanvas:
-    def __init__(self, root: tk.Tk, model_path: Path) -> None:
-        self.root = root
-        self.root.title("Quick, Draw! Doodle Classifier")
-        self.root.resizable(False, False)
-        self.last_point: tuple[int, int] | None = None
-        self.has_drawing = False
-        self.image = Image.new("L", (CANVAS_SIZE, CANVAS_SIZE), color="white")
-        self.image_draw = ImageDraw.Draw(self.image)
+def make_handler(predictor: DoodlePredictor) -> type[BaseHTTPRequestHandler]:
+    class GameHandler(BaseHTTPRequestHandler):
+        def _send_json(self, status: int, payload: dict[str, Any]) -> None:
+            body = json.dumps(payload).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
 
-        try:
-            self.predictor: DoodlePredictor | None = DoodlePredictor(model_path)
-            self.model_error: str | None = None
-        except (FileNotFoundError, KeyError, RuntimeError, ValueError) as exc:
-            self.predictor = None
-            self.model_error = str(exc)
-            print(f"Prediction unavailable: {self.model_error}", flush=True)
+        def do_GET(self) -> None:
+            route = urlparse(self.path).path
+            if route == "/api/categories":
+                self._send_json(200, {"categories": predictor.classes})
+                return
+            if route == "/":
+                try:
+                    body = PAGE.read_bytes()
+                except OSError as exc:
+                    self._send_json(500, {"error": f"Could not load game page: {exc}"})
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            self._send_json(404, {"error": "Not found"})
 
-        toolbar = tk.Frame(root, padx=8, pady=8)
-        toolbar.pack(fill="x")
-        tk.Label(toolbar, text="Draw with the left mouse button").pack(side="left")
-        tk.Button(toolbar, text="Clear", command=self.clear).pack(side="right")
+        def do_POST(self) -> None:
+            if urlparse(self.path).path != "/api/predict":
+                self._send_json(404, {"error": "Not found"})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if length <= 0 or length > MAX_REQUEST_BYTES:
+                    self._send_json(413, {"error": "Drawing request is empty or too large"})
+                    return
+                payload = json.loads(self.rfile.read(length))
+                target = payload["target"]
+                if target not in predictor.classes:
+                    self._send_json(400, {"error": "Unknown target category"})
+                    return
+                image_data = payload["image"].split(",", 1)[-1]
+                image_bytes = base64.b64decode(image_data, validate=True)
+                with Image.open(io.BytesIO(image_bytes)) as image:
+                    image.load()
+                    probabilities = dict(predictor.predict(image, top_k=len(predictor.classes)))
+                target_probability = probabilities[target]
+                guess, guess_probability = max(probabilities.items(), key=lambda item: item[1])
+                print(
+                    f"{datetime.now().strftime('%H:%M:%S')} | AI guessed {guess} "
+                    f"({guess_probability:.1%}) | {target} score {target_probability:.1%}",
+                    flush=True,
+                )
+                self._send_json(
+                    200,
+                    {
+                        "target": target,
+                        "score": target_probability,
+                        "guess": guess,
+                        "guess_probability": guess_probability,
+                    },
+                )
+            except (KeyError, TypeError, ValueError, binascii.Error, OSError) as exc:
+                self._send_json(400, {"error": f"Could not read drawing: {exc}"})
+            except Exception as exc:  # Return inference errors to the browser instead of dropping the request.
+                self._send_json(500, {"error": f"Prediction failed: {exc}"})
 
-        self.surface = tk.Canvas(
-            root,
-            width=CANVAS_SIZE,
-            height=CANVAS_SIZE,
-            background="white",
-            highlightthickness=1,
-            highlightbackground="#888888",
-            cursor="crosshair",
-        )
-        self.surface.pack(padx=8, pady=(0, 8))
-        self.surface.bind("<Button-1>", self.start_stroke)
-        self.surface.bind("<B1-Motion>", self.continue_stroke)
-        self.surface.bind("<ButtonRelease-1>", self.end_stroke)
+        def log_message(self, fmt: str, *args: Any) -> None:
+            print(f"{self.address_string()} - {fmt % args}")
 
-        self.status = tk.StringVar(value="Predictions will appear in the terminal every 1.5 seconds.")
-        tk.Label(root, textvariable=self.status, anchor="w", padx=8, pady=6).pack(fill="x")
-        self.root.after(PREDICTION_INTERVAL_MS, self.report_prediction)
-
-    def start_stroke(self, event: tk.Event) -> None:
-        point = (event.x, event.y)
-        self.last_point = point
-        self.has_drawing = True
-        radius = INK_WIDTH // 2
-        self.surface.create_oval(
-            point[0] - radius,
-            point[1] - radius,
-            point[0] + radius,
-            point[1] + radius,
-            fill="black",
-            outline="black",
-        )
-        self.image_draw.ellipse(
-            (point[0] - radius, point[1] - radius, point[0] + radius, point[1] + radius),
-            fill="black",
-        )
-
-    def continue_stroke(self, event: tk.Event) -> None:
-        if self.last_point is None:
-            self.start_stroke(event)
-            return
-        point = (event.x, event.y)
-        self.surface.create_line(
-            *self.last_point,
-            *point,
-            fill="black",
-            width=INK_WIDTH,
-            capstyle=tk.ROUND,
-            smooth=True,
-        )
-        self.image_draw.line(
-            (*self.last_point, *point),
-            fill="black",
-            width=INK_WIDTH,
-        )
-        radius = INK_WIDTH // 2
-        self.image_draw.ellipse(
-            (point[0] - radius, point[1] - radius, point[0] + radius, point[1] + radius),
-            fill="black",
-        )
-        self.last_point = point
-        self.has_drawing = True
-
-    def end_stroke(self, _event: tk.Event) -> None:
-        self.last_point = None
-
-    def clear(self) -> None:
-        self.surface.delete("all")
-        self.image = Image.new("L", (CANVAS_SIZE, CANVAS_SIZE), color="white")
-        self.image_draw = ImageDraw.Draw(self.image)
-        self.last_point = None
-        self.has_drawing = False
-
-    def report_prediction(self) -> None:
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        if self.predictor is None:
-            message = f"{timestamp} | prediction unavailable: {self.model_error}"
-        elif not self.has_drawing:
-            message = f"{timestamp} | canvas is blank; draw something to classify"
-        else:
-            predictions = self.predictor.predict(self.image)
-            formatted = ", ".join(f"{label} {score:.1%}" for label, score in predictions)
-            message = f"{timestamp} | {formatted}"
-        print(message, flush=True)
-        self.status.set(message.split(" | ", maxsplit=1)[1])
-        self.root.after(PREDICTION_INTERVAL_MS, self.report_prediction)
+    return GameHandler
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
-    root = tk.Tk()
-    DoodleCanvas(root, args.model)
-    root.mainloop()
+    try:
+        predictor = DoodlePredictor(args.model)
+    except (FileNotFoundError, KeyError, RuntimeError, ValueError) as exc:
+        parser.error(str(exc))
+    if len(predictor.classes) < 3:
+        parser.error("The trained model needs at least three categories for the game")
+
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(predictor))
+    print(f"Doodle game ready at http://{args.host}:{args.port}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping doodle game")
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":
