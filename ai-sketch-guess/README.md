@@ -1,5 +1,5 @@
 # AI Sketch Guess
-A small CNN that guesses doodles drawn on a 512×512 canvas.
+A small VGG^ CNN that guesses doodles drawn on a 512×512 canvas.
 The classifier uses Google's Quick, Draw! dataset.
 Install dependencies: `pip install -r requirement.txt`
 Download classes: `python src/guess/data.py --classes cat dog`
