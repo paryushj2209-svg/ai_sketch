@@ -4,64 +4,133 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Doodle Guess</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
   <style>
-    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #20212a; background: #f4f5f8; }
+    :root { color-scheme: dark; font-family: 'Space Grotesk', system-ui, sans-serif; color: #eaf2ff; background: #070b14; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 28px 16px 40px; }
-    main { width: min(100%, 920px); margin: auto; }
-    h1 { margin: 0 0 6px; font-size: 1.8rem; }
-    .intro { margin: 0 0 22px; color: #626575; }
-    .layout { display: grid; grid-template-columns: minmax(0, 512px) minmax(220px, 1fr); gap: 22px; align-items: start; }
-    .panel { background: white; border: 1px solid #e2e4eb; border-radius: 14px; padding: 18px; box-shadow: 0 5px 18px #20212a0a; }
-    h2 { margin: 0 0 12px; font-size: 1rem; }
+    body { position: relative; min-height: 100vh; margin: 0; padding: 34px 18px 48px; background: radial-gradient(ellipse at 50% -20%, #132647 0, #0b1221 43%, #070b14 78%); }
+    body::before { position: fixed; z-index: 0; inset: 0; content: ''; opacity: .23; pointer-events: none; background-image: radial-gradient(circle at center, #39d9ff 1px, transparent 1.5px), linear-gradient(#263a59 1px, transparent 1px), linear-gradient(90deg, #263a59 1px, transparent 1px); background-size: 58px 58px, 58px 58px, 58px 58px; mask-image: linear-gradient(to bottom, #000, transparent 90%); }
+    main { position: relative; z-index: 1; width: min(100%, 1030px); margin: auto; }
+    h1 { margin: 0 0 7px; color: #f3f7ff; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.055em; text-shadow: 0 0 32px #42d9ff55; }
+    .intro { margin: 0 0 24px; color: #9baec9; }
+    .layout { display: grid; grid-template-columns: minmax(0, 540px) minmax(240px, 1fr); gap: 20px; align-items: start; }
+    .panel { position: relative; overflow: hidden; background: linear-gradient(145deg, #111b2dF2, #0b1220F5); border: 1px solid #263c5a; border-radius: 18px; padding: 20px; box-shadow: 0 18px 54px #0008, inset 0 1px #ffffff0b; }
+    .panel::before { position: absolute; top: 0; left: 22px; width: 90px; height: 2px; content: ''; background: linear-gradient(90deg, #38dfff, #9b7cff, transparent); box-shadow: 0 0 18px #38dfff99; }
+    .panel::after { position: absolute; top: 12px; right: 15px; width: 75px; height: 42px; content: ''; opacity: .32; pointer-events: none; background: radial-gradient(circle at 10% 20%, #45e5ff 0 2px, transparent 3px), radial-gradient(circle at 50% 50%, #9a85ff 0 2px, transparent 3px), radial-gradient(circle at 90% 20%, #45e5ff 0 2px, transparent 3px), radial-gradient(circle at 28% 90%, #9a85ff 0 2px, transparent 3px), linear-gradient(25deg, transparent 47%, #42dfff 48% 49%, transparent 50%), linear-gradient(-25deg, transparent 47%, #9a85ff 48% 49%, transparent 50%); }
+    h2 { margin: 0 0 15px; color: #dfe9ff; font-size: 1rem; letter-spacing: .02em; }
     .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
-    .choice { min-height: 46px; border: 1px solid #d9dbe4; border-radius: 9px; background: white; color: inherit; font: inherit; font-weight: 650; cursor: pointer; }
-    .choice:hover { border-color: #6265df; }
-    .choice.selected { border-color: #5659db; background: #efefff; color: #4144bd; box-shadow: inset 0 0 0 1px #5659db; }
-    .canvas-wrap { width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #d4d6df; border-radius: 8px; background: white; touch-action: none; }
+    .level-info { margin: 0 0 12px; padding: 11px 13px; border: 1px solid #263f63; border-radius: 10px; background: #10203a; color: #7edfff; font-size: .9rem; font-weight: 700; }
+    .timer { margin: -3px 0 13px; color: #ffcc70; font-family: 'DM Mono', monospace; font-size: 1rem; font-weight: 500; text-shadow: 0 0 18px #ffad4355; }
+    .choice { min-height: 46px; border: 1px solid #354b6b; border-radius: 10px; background: #111d30; color: #eaf2ff; font: inherit; font-weight: 650; cursor: pointer; transition: border-color .2s, background .2s, box-shadow .2s, transform .2s; }
+    .choice:hover { transform: translateY(-2px); border-color: #4bdfff; box-shadow: 0 0 18px #35d9ff22; }
+    .choice.selected { border-color: #51e2ff; background: #103145; color: #8cf0ff; box-shadow: inset 0 0 0 1px #51e2ff, 0 0 22px #35d9ff22; }
+    .canvas-wrap { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #466589; border-radius: 12px; background: white; box-shadow: 0 0 0 4px #111d30, 0 0 30px #37d9ff17; touch-action: none; }
     canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+    .turtle-cursor { position: absolute; z-index: 1; width: 68px; height: 68px; display: none; object-fit: contain; transform: translate(-50%, -50%) rotate(0deg); transition: transform 90ms linear; pointer-events: none; }
+    .hand-cursor { position: absolute; z-index: 2; display: none; width: 24px; height: 24px; border: 3px solid #12b9de; border-radius: 50%; background: #fff9; box-shadow: 0 0 0 2px #fff, 0 0 18px #12cfff; transform: translate(-50%, -50%); pointer-events: none; }
+    .game-over-overlay { position: absolute; z-index: 3; inset: 0; display: grid; place-items: center; padding: 24px; background: #080d19e8; color: white; text-align: center; backdrop-filter: blur(8px); animation: overlay-arrive .35s ease-out both; }
+    .level-result-overlay { position: fixed; z-index: 5; }
+    .game-over-overlay[hidden] { display: none; }
+    .game-over-card { max-width: 420px; padding: 28px; border: 1px solid #3b5b7d; border-radius: 18px; background: linear-gradient(145deg, #15243a, #0a1322); box-shadow: 0 0 55px #2fdcff25; animation: card-arrive .5s cubic-bezier(.2,.8,.2,1) both; }
+    .game-over-card h3 { margin: 0 0 8px; color: #f5f8ff; font-size: 2rem; }
+    .game-over-card p { margin: 0 0 18px; color: #b9c9df; }
+    .game-over-card .score { color: #69e5ff; }
+    .camera-controls { margin: 0 0 14px; padding: 12px; border: 1px solid #263f5e; border-radius: 10px; background: #0d1828; }
+    .camera-controls[hidden] { display: none; }
+    .camera-row { display: flex; align-items: center; gap: 12px; }
+    .camera-preview { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .camera-copy { margin: 0; color: #a9bdd8; font-size: .88rem; line-height: 1.4; }
+    .keyboard-controls { margin: 0 0 14px; padding: 11px 12px; border: 1px solid #263f5e; border-radius: 10px; background: #0d1828; color: #a9bdd8; font-size: .9rem; line-height: 1.45; }
+    .keyboard-controls[hidden] { display: none; }
     .actions { display: flex; gap: 10px; margin-top: 13px; }
-    .action { min-height: 42px; padding: 0 15px; border: 0; border-radius: 9px; font: inherit; font-weight: 650; cursor: pointer; }
-    .primary { flex: 1; background: #5659db; color: white; }
-    .primary:disabled { background: #b5b6c7; cursor: not-allowed; }
-    .secondary { background: #ececf2; color: #30313b; }
-    .hint, .status { margin: 13px 0 0; color: #656777; font-size: .9rem; line-height: 1.45; }
-    .result { margin-top: 14px; padding: 14px; border-radius: 10px; background: #f5f5fa; }
-    .result-label { display: block; color: #686a78; font-size: .82rem; }
-    .guess { margin: 4px 0 14px; font-size: 1.28rem; font-weight: 750; }
-    .score { margin: 4px 0 0; color: #4144bd; font-size: 2rem; font-weight: 800; }
-    .error { color: #a22b32; }
-    @media (max-width: 720px) { body { padding: 20px 12px 32px; } .layout { grid-template-columns: 1fr; } .panel { padding: 14px; } }
+    .action { min-height: 42px; padding: 0 15px; border: 1px solid transparent; border-radius: 10px; font: inherit; font-weight: 650; cursor: pointer; transition: transform .2s, box-shadow .2s, background .2s; }
+    .action:hover:not(:disabled) { transform: translateY(-1px); }
+    .primary { flex: 1; border-color: #4bdfff55; background: linear-gradient(110deg, #117ba1, #514cc1); color: white; box-shadow: 0 5px 20px #378eff25; }
+    .primary:hover:not(:disabled) { box-shadow: 0 7px 28px #40dcff44; }
+    .primary:disabled { background: #26364a; color: #8291a5; cursor: not-allowed; }
+    .secondary { border-color: #334c69; background: #15243a; color: #dce8f9; }
+    .hint, .status { margin: 13px 0 0; color: #a9bdd8; font-size: .9rem; line-height: 1.45; }
+    .result { margin-top: 14px; padding: 16px; border: 1px solid #263f5e; border-radius: 12px; background: #0a1423; }
+    .result-label { display: block; color: #8ea6c4; font-family: 'DM Mono', monospace; font-size: .76rem; }
+    .guess { margin: 5px 0 16px; color: #eaf2ff; font-size: 1.28rem; font-weight: 750; }
+    .score { margin: 4px 0 0; color: #65e2ff; font-family: 'DM Mono', monospace; font-size: 2rem; font-weight: 800; text-shadow: 0 0 20px #46dfff44; }
+    .error { color: #ff8795; }
+    .bomb-explosion { position: absolute; z-index: 4; display: none; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle, #fff8a7 0 12%, #ffbb35 22%, #ff532e 46%, #e51a5d 66%, transparent 72%); box-shadow: 0 0 28px 12px #ff542e99; transform: translate(-50%, -50%); pointer-events: none; }
+    .bomb-explosion::before, .bomb-explosion::after { position: absolute; inset: -5px; content: ''; border: 3px solid #ffd76a; border-radius: 50%; animation: blast-ring .75s cubic-bezier(.1,.6,.2,1) both; }
+    .bomb-explosion::after { border-color: #ff573b; animation-delay: .08s; }
+    .bomb-explosion.active { display: block; animation: blast-core .72s ease-out both; }
+    .canvas-wrap.hit-shake { animation: hit-shake .42s linear both; }
+    @keyframes blast-core { 0% { opacity: 0; scale: .15; } 18% { opacity: 1; scale: 2.4; } 100% { opacity: 0; scale: 7; } }
+    @keyframes blast-ring { 0% { opacity: 1; transform: scale(.25); } 100% { opacity: 0; transform: scale(6); } }
+    @keyframes hit-shake { 0%,100% { translate: 0 0; } 20% { translate: -7px 2px; } 40% { translate: 6px -2px; } 60% { translate: -4px -1px; } 80% { translate: 3px 1px; } }
+    @keyframes overlay-arrive { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes card-arrive { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @media (max-width: 720px) { body { padding: 22px 12px 32px; } .layout { grid-template-columns: 1fr; } .panel { padding: 15px; } }
   </style>
 </head>
 <body>
   <main>
-    <h1>Doodle Guess</h1>
-    <p class="intro">Pick one of three random categories, draw it, and see what the AI recognizes.</p>
+    <h1 class="animate__animated animate__fadeInDown">Doodle Guess</h1>
+    <p class="intro">Draw a Hexagon in three 30-second levels: mouse, camera pinch, then keyboard controls.</p>
     <div class="layout">
-      <section class="panel">
+      <section class="panel animate__animated animate__fadeInUp">
         <h2>What will you draw?</h2>
-        <div id="choices" class="choices" aria-label="Choose a category"></div>
-        <div class="canvas-wrap"><canvas id="canvas" width="512" height="512" aria-label="512 by 512 drawing canvas"></canvas></div>
+        <p id="level-info" class="level-info">Level 1 — draw with your mouse.</p>
+        <p id="timer" class="timer" aria-live="off" hidden>Time left: 30s</p>
+        <div id="choices" class="choices" aria-label="Choose Hexagon"></div>
+        <div id="camera-controls" class="camera-controls" hidden>
+          <div class="camera-row">
+            <video id="camera-preview" class="camera-preview" autoplay playsinline muted aria-hidden="true" tabindex="-1"></video>
+            <div>
+              <button id="start-camera" class="action primary" type="button">Start Level 2 camera</button>
+              <p id="gesture-status" class="camera-copy">The blue cursor follows your index finger. Pinch thumb and index finger to draw.</p>
+            </div>
+          </div>
+        </div>
+        <p id="keyboard-controls" class="keyboard-controls" hidden>Use WASD or the arrow keys to move the pointer. Hold Space while moving to draw.</p>
+        <div class="canvas-wrap">
+          <canvas id="canvas" width="512" height="512" aria-label="512 by 512 drawing canvas"></canvas>
+          <img id="turtle-cursor" class="turtle-cursor" src="/assets/race-car-cursor.png" alt="" aria-hidden="true" draggable="false">
+          <span id="hand-cursor" class="hand-cursor" aria-hidden="true"></span>
+          <span id="bomb-explosion" class="bomb-explosion" aria-hidden="true"></span>
+          <div id="game-over-overlay" class="game-over-overlay" role="alert" aria-live="assertive" hidden>
+            <div class="game-over-card">
+              <h3>Game Over</h3>
+              <p>You hit a hidden bomb.</p>
+              <button id="game-over-new-round" class="action primary" type="button">Play again</button>
+            </div>
+          </div>
+        </div>
         <div class="actions">
           <button id="clear" class="action secondary" type="button">Clear</button>
           <button id="new-round" class="action primary" type="button">New round</button>
         </div>
         <p id="status" class="status" aria-live="polite">Loading available categories…</p>
+        <div id="level-result-overlay" class="game-over-overlay level-result-overlay" role="dialog" aria-modal="true" aria-labelledby="level-result-title" hidden>
+          <div class="game-over-card">
+            <h3 id="level-result-title">Time's up</h3>
+            <p id="level-result-copy"></p>
+            <p id="level-result-score" class="score"></p>
+            <button id="level-result-action" class="action primary" type="button">Next level</button>
+          </div>
+        </div>
       </section>
-      <aside class="panel">
+      <aside class="panel animate__animated animate__fadeInUp animate__delay-1s">
         <h2>AI result</h2>
-        <p id="result-hint" class="hint">Choose a category and start drawing. The AI checks your sketch after you pause.</p>
+        <p id="result-hint" class="hint">Choose Hexagon and start drawing. The AI checks your sketch after you pause.</p>
         <div class="result" aria-live="polite">
           <span class="result-label">AI's best guess</span>
           <p id="guess" class="guess">—</p>
-          <span class="result-label">Probability your drawing matches <span id="target-name">the chosen category</span></span>
+          <span class="result-label">Probability your drawing matches <span id="target-name">Hexagon</span></span>
           <p id="score" class="score">—</p>
         </div>
       </aside>
     </div>
   </main>
-  <script>
+  <script type="module">
     const canvas = document.querySelector('#canvas');
     const ctx = canvas.getContext('2d');
     const choicesNode = document.querySelector('#choices');
@@ -72,55 +141,352 @@
     const resultHintNode = document.querySelector('#result-hint');
     const clearButton = document.querySelector('#clear');
     const newRoundButton = document.querySelector('#new-round');
+    const cameraControls = document.querySelector('#camera-controls');
+    const cameraButton = document.querySelector('#start-camera');
+    const cameraVideo = document.querySelector('#camera-preview');
+    const gestureStatus = document.querySelector('#gesture-status');
+    const keyboardControls = document.querySelector('#keyboard-controls');
+    const turtleCursor = document.querySelector('#turtle-cursor');
+    const handCursor = document.querySelector('#hand-cursor');
+    const bombExplosion = document.querySelector('#bomb-explosion');
+    const canvasWrap = document.querySelector('.canvas-wrap');
+    const gameOverOverlay = document.querySelector('#game-over-overlay');
+    const gameOverNewRound = document.querySelector('#game-over-new-round');
+    const levelResultOverlay = document.querySelector('#level-result-overlay');
+    const levelResultTitle = document.querySelector('#level-result-title');
+    const levelResultCopy = document.querySelector('#level-result-copy');
+    const levelResultScore = document.querySelector('#level-result-score');
+    const levelResultAction = document.querySelector('#level-result-action');
+    const timerNode = document.querySelector('#timer');
     let categories = [];
     let options = [];
     let target = null;
+    let level = 1;
+    let won = false;
     let drawing = false;
     let hasDrawing = false;
     let predictionTimer = null;
     let requestNumber = 0;
+    let cameraStream = null;
+    let cameraFrame = null;
+    let handLandmarker = null;
+    let lastVideoTime = -1;
+    let lastDetectionAt = 0;
+    let cursorPoint = null;
+    let gesturePinched = false;
+    let keyboardFrame = null;
+    let lastKeyboardTime = 0;
+    let turtleX = canvas.width / 2;
+    let turtleY = canvas.height / 2;
+    let gameOver = false;
+    let bombs = [];
+    let levelLocked = true;
+    let levelDeadline = 0;
+    let levelTimerInterval = null;
+    let latestScore = null;
+    let latestGuess = null;
+    let resultAction = null;
+    const bombHitRadius = 25;
+    const levelDurationMs = 30_000;
+    const pressedKeys = new Set();
+
+    function updateLevelInfo() {
+      const text = level === 1
+        ? 'Level 1 — draw with your mouse.'
+        : level === 2
+          ? 'Level 2 — pinch thumb and index finger to draw.'
+          : 'Level 3 — use WASD or arrow keys; hold Space to draw. Score 90% to win.';
+      document.querySelector('#level-info').textContent = text;
+      resultHintNode.textContent = target
+        ? `Draw a ${target}; you have 30 seconds for Level ${level}.`
+        : 'Choose Hexagon and start drawing.';
+    }
+
+    function stopLevelTimer() {
+      clearInterval(levelTimerInterval);
+      levelTimerInterval = null;
+      levelDeadline = 0;
+      timerNode.hidden = true;
+    }
+
+    function startLevelTimer() {
+      stopLevelTimer();
+      levelLocked = false;
+      won = false;
+      timerNode.hidden = false;
+      levelDeadline = Date.now() + levelDurationMs;
+      const update = () => {
+        const remaining = Math.max(0, Math.ceil((levelDeadline - Date.now()) / 1000));
+        timerNode.textContent = `Time left: ${remaining}s`;
+        if (remaining === 0) finishLevel();
+      };
+      update();
+      levelTimerInterval = setInterval(update, 100);
+    }
+
+    function showLevelResult(title, copy, score, actionText, action) {
+      stopLevelTimer();
+      levelLocked = true;
+      drawing = false;
+      clearTimeout(predictionTimer);
+      levelResultTitle.textContent = title;
+      levelResultCopy.textContent = copy;
+      levelResultScore.textContent = score;
+      levelResultAction.textContent = actionText;
+      resultAction = action;
+      levelResultOverlay.hidden = false;
+      levelResultAction.focus();
+    }
+
+    async function finishLevel() {
+      if (levelLocked || won) return;
+      levelLocked = true;
+      stopLevelTimer();
+      clearTimeout(predictionTimer);
+      requestNumber++;
+      drawing = false;
+      if (level === 2) stopCamera();
+      if (level === 3) stopKeyboardControl();
+      clearButton.disabled = true;
+      newRoundButton.disabled = true;
+      cameraButton.disabled = true;
+
+      levelResultTitle.textContent = "Time's up";
+      levelResultCopy.textContent = 'Calculating your final Hexagon score…';
+      levelResultScore.textContent = '…';
+      levelResultAction.textContent = 'Please wait';
+      levelResultAction.disabled = true;
+      levelResultOverlay.hidden = false;
+
+      let score = 0;
+      if (hasDrawing) {
+        score = await predict({ final: true }) ?? latestScore ?? 0;
+      } else {
+        guessNode.textContent = '—';
+        scoreNode.textContent = '0.0%';
+        latestScore = 0;
+        latestGuess = null;
+      }
+      const scoreText = `${(score * 100).toFixed(1)}%`;
+      levelResultScore.textContent = `Hexagon score: ${scoreText}`;
+
+      if (level === 3 && score >= 0.90) {
+        won = true;
+        levelResultTitle.textContent = 'You win!';
+        levelResultCopy.textContent = 'You reached the 90% Level 3 score needed to win.';
+        levelResultAction.textContent = 'Play again';
+        resultAction = makeRound;
+      } else if (level === 3) {
+        levelResultCopy.textContent = 'You needed at least 90% to win Level 3.';
+        levelResultAction.textContent = 'Try again';
+        resultAction = makeRound;
+      } else {
+        levelResultCopy.textContent = `Level ${level} is complete. Continue when you are ready.`;
+        levelResultAction.textContent = 'Next level';
+        resultAction = advanceLevel;
+      }
+      levelResultAction.disabled = false;
+      levelResultAction.focus();
+    }
+
+    function stopCamera() {
+      if (cameraFrame !== null) cancelAnimationFrame(cameraFrame);
+      cameraFrame = null;
+      cameraStream?.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+      cameraVideo.srcObject = null;
+      cameraVideo.hidden = true;
+      drawing = false;
+      gesturePinched = false;
+      cursorPoint = null;
+      handCursor.style.display = 'none';
+      lastVideoTime = -1;
+    }
+
+    function stopKeyboardControl() {
+      if (keyboardFrame !== null) cancelAnimationFrame(keyboardFrame);
+      keyboardFrame = null;
+      lastKeyboardTime = 0;
+      pressedKeys.clear();
+      drawing = false;
+      turtleCursor.style.display = 'none';
+    }
+
+    function randomUnit() {
+      if (globalThis.crypto?.getRandomValues) {
+        const value = new Uint32Array(1);
+        globalThis.crypto.getRandomValues(value);
+        return value[0] / 0x100000000;
+      }
+      return Math.random();
+    }
+
+    function createHiddenBombs() {
+      const count = 15 + Math.floor(randomUnit() * 11);
+      const safeFromStart = 72;
+      const bombs = [];
+      let attempts = 0;
+      while (bombs.length < count && attempts < 1000) {
+        attempts++;
+        const bomb = {
+          x: bombHitRadius + randomUnit() * (canvas.width - bombHitRadius * 2),
+          y: bombHitRadius + randomUnit() * (canvas.height - bombHitRadius * 2)
+        };
+        const tooCloseToStart = Math.hypot(bomb.x - canvas.width / 2, bomb.y - canvas.height / 2) < safeFromStart;
+        const tooCloseToBomb = bombs.some((existing) => Math.hypot(existing.x - bomb.x, existing.y - bomb.y) < bombHitRadius * 2 + 4);
+        if (!tooCloseToStart && !tooCloseToBomb) bombs.push(bomb);
+      }
+
+      if (bombs.length < count) {
+        bombs.length = 0;
+        const candidates = [];
+        for (let y = 30; y <= canvas.height - 30; y += 60) {
+          for (let x = 30; x <= canvas.width - 30; x += 60) {
+            if (Math.hypot(x - canvas.width / 2, y - canvas.height / 2) >= safeFromStart) {
+              candidates.push({ x, y });
+            }
+          }
+        }
+        for (let i = candidates.length - 1; i > 0; i--) {
+          const j = Math.floor(randomUnit() * (i + 1));
+          [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        }
+        bombs.push(...candidates.slice(0, count));
+      }
+      return bombs;
+    }
+
+    function segmentHitsBomb(startX, startY, endX, endY) {
+      const dx = endX - startX;
+      const dy = endY - startY;
+      const lengthSquared = dx * dx + dy * dy;
+      return bombs.find((bomb) => {
+        const projection = lengthSquared === 0
+          ? 0
+          : Math.max(0, Math.min(1, ((bomb.x - startX) * dx + (bomb.y - startY) * dy) / lengthSquared));
+        const closestX = startX + projection * dx;
+        const closestY = startY + projection * dy;
+        return Math.hypot(bomb.x - closestX, bomb.y - closestY) <= bombHitRadius;
+      }) || null;
+    }
+
+    function triggerGameOver(hitBomb) {
+      if (gameOver) return;
+      gameOver = true;
+      won = true;
+      levelLocked = true;
+      stopLevelTimer();
+      bombs = [];
+      clearTimeout(predictionTimer);
+      requestNumber++;
+      stopKeyboardControl();
+      bombExplosion.style.left = `${(hitBomb.x / canvas.width) * 100}%`;
+      bombExplosion.style.top = `${(hitBomb.y / canvas.height) * 100}%`;
+      bombExplosion.classList.remove('active');
+      canvasWrap.classList.remove('hit-shake');
+      void bombExplosion.offsetWidth;
+      bombExplosion.classList.add('active');
+      canvasWrap.classList.add('hit-shake');
+      levelResultOverlay.hidden = true;
+      gameOverOverlay.hidden = false;
+      clearButton.disabled = true;
+      newRoundButton.disabled = true;
+      statusNode.textContent = 'Game over. The pointer touched a hidden bomb.';
+      gameOverNewRound.focus();
+    }
 
     function clearCanvas() {
       requestNumber++;
+      drawing = false;
+      cursorPoint = null;
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       hasDrawing = false;
+      latestScore = null;
+      latestGuess = null;
       guessNode.textContent = '—';
       scoreNode.textContent = '—';
-      resultHintNode.textContent = target ? `Draw a ${target}; the AI checks your sketch after you pause.` : 'Choose a category and start drawing.';
+      updateLevelInfo();
       clearTimeout(predictionTimer);
     }
 
     function makeRound() {
-      const shuffled = [...categories];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      options = shuffled.slice(0, 3);
+      stopLevelTimer();
+      stopCamera();
+      stopKeyboardControl();
+      level = 1;
+      won = false;
+      levelLocked = true;
+      gameOver = false;
+      bombs = [];
+      bombExplosion.classList.remove('active');
+      canvasWrap.classList.remove('hit-shake');
+      gameOverOverlay.hidden = true;
+      levelResultOverlay.hidden = true;
+      clearButton.disabled = false;
+      newRoundButton.disabled = false;
+      cameraControls.hidden = true;
+      keyboardControls.hidden = true;
+      cameraButton.disabled = false;
+      cameraButton.textContent = 'Start Level 2 camera';
+      options = ['hexagon'];
       target = null;
       choicesNode.replaceChildren(...options.map((category) => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'choice';
-        button.textContent = category;
+        button.textContent = category.charAt(0).toUpperCase() + category.slice(1);
         button.addEventListener('click', () => selectTarget(category, button));
         return button;
       }));
-      targetNameNode.textContent = 'the chosen category';
+      targetNameNode.textContent = 'Hexagon';
       clearCanvas();
       statusNode.classList.remove('error');
-      statusNode.textContent = 'Select one of the three categories to begin.';
+      statusNode.textContent = 'Select Hexagon to start the 30-second timer.';
+      updateLevelInfo();
     }
 
     function selectTarget(category, selectedButton) {
       target = category;
+      won = false;
+      levelLocked = false;
       choicesNode.querySelectorAll('.choice').forEach((button) => button.classList.remove('selected'));
       selectedButton.classList.add('selected');
+      selectedButton.disabled = true;
       targetNameNode.textContent = category;
       clearCanvas();
       statusNode.classList.remove('error');
       statusNode.textContent = `Draw a ${category} on the canvas.`;
+      startLevelTimer();
+    }
+
+    function startLevel(nextLevel) {
+      level = nextLevel;
+      won = false;
+      levelLocked = true;
+      levelResultOverlay.hidden = true;
+      clearButton.disabled = false;
+      newRoundButton.disabled = false;
+      cameraButton.disabled = false;
+      cameraControls.hidden = level !== 2;
+      keyboardControls.hidden = level !== 3;
+      clearCanvas();
+      updateLevelInfo();
+
+      if (level === 2) {
+        statusNode.textContent = `Level 2 started. Pinch to draw ${target}.`;
+        startLevelTimer();
+        startCamera();
+      } else if (level === 3) {
+        statusNode.textContent = `Level 3 started. Draw ${target} and score at least 90% to win.`;
+        startKeyboardControl();
+        startLevelTimer();
+      }
+    }
+
+    function advanceLevel() {
+      if (level < 3) startLevel(level + 1);
+      else makeRound();
     }
 
     function pointFromEvent(event) {
@@ -130,6 +496,7 @@
     }
 
     canvas.addEventListener('pointerdown', (event) => {
+      if (level !== 1 || won || levelLocked) return;
       if (!target) { statusNode.textContent = 'Select a category before drawing.'; return; }
       drawing = true;
       canvas.setPointerCapture(event.pointerId);
@@ -147,7 +514,7 @@
     });
 
     canvas.addEventListener('pointermove', (event) => {
-      if (!drawing) return;
+      if (level !== 1 || !drawing || won || levelLocked) return;
       const point = pointFromEvent(event);
       ctx.lineTo(point.x, point.y);
       ctx.stroke();
@@ -158,27 +525,286 @@
     canvas.addEventListener('pointerup', finishStroke);
     canvas.addEventListener('pointercancel', finishStroke);
 
-    async function predict() {
-      if (!target || !hasDrawing) return;
+    function startKeyboardControl() {
+      stopCamera();
+      keyboardControls.hidden = false;
+      turtleX = canvas.width / 2;
+      turtleY = canvas.height / 2;
+      bombs = createHiddenBombs();
+      turtleCursor.style.display = 'block';
+      turtleCursor.style.left = '50%';
+      turtleCursor.style.top = '50%';
+      turtleCursor.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+      lastKeyboardTime = 0;
+      keyboardFrame = requestAnimationFrame(updateKeyboardControl);
+    }
+
+    function updateKeyboardControl(now) {
+      if (level !== 3 || won || levelLocked) {
+        keyboardFrame = null;
+        return;
+      }
+      const elapsed = lastKeyboardTime ? Math.min((now - lastKeyboardTime) / 1000, 0.05) : 0;
+      lastKeyboardTime = now;
+      let horizontal = Number(pressedKeys.has('ArrowRight') || pressedKeys.has('d'))
+        - Number(pressedKeys.has('ArrowLeft') || pressedKeys.has('a'));
+      let vertical = Number(pressedKeys.has('ArrowDown') || pressedKeys.has('s'))
+        - Number(pressedKeys.has('ArrowUp') || pressedKeys.has('w'));
+      const magnitude = Math.hypot(horizontal, vertical);
+      if (magnitude > 0) {
+        horizontal /= magnitude;
+        vertical /= magnitude;
+      }
+      const previousX = turtleX;
+      const previousY = turtleY;
+      const speed = 210;
+      const nextX = Math.max(0, Math.min(canvas.width, turtleX + horizontal * speed * elapsed));
+      const nextY = Math.max(0, Math.min(canvas.height, turtleY + vertical * speed * elapsed));
+      const moved = nextX !== previousX || nextY !== previousY;
+      const hitBomb = moved ? segmentHitsBomb(previousX, previousY, nextX, nextY) : null;
+      if (hitBomb) {
+        turtleX = nextX;
+        turtleY = nextY;
+        triggerGameOver(hitBomb);
+        return;
+      }
+      turtleX = nextX;
+      turtleY = nextY;
+      turtleCursor.style.left = `${(turtleX / canvas.width) * 100}%`;
+      turtleCursor.style.top = `${(turtleY / canvas.height) * 100}%`;
+      if (moved) {
+        const heading = Math.atan2(nextY - previousY, nextX - previousX) * 180 / Math.PI + 90;
+        turtleCursor.style.transform = `translate(-50%, -50%) rotate(${heading}deg)`;
+      }
+
+      const spaceHeld = pressedKeys.has('Space');
+      if (spaceHeld && moved && target) {
+        if (!drawing) {
+          ctx.beginPath();
+          ctx.moveTo(previousX, previousY);
+          ctx.strokeStyle = '#111';
+          ctx.lineWidth = 8;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          drawing = true;
+        }
+        ctx.lineTo(turtleX, turtleY);
+        ctx.stroke();
+        hasDrawing = true;
+        schedulePrediction();
+      } else if (!spaceHeld) {
+        drawing = false;
+      }
+      keyboardFrame = requestAnimationFrame(updateKeyboardControl);
+    }
+
+    const turtleKeys = new Set([
+      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+      'w', 'a', 's', 'd', 'Space'
+    ]);
+    window.addEventListener('keydown', (event) => {
+      if (level !== 3 || won || levelLocked) return;
+      const key = event.code.startsWith('Arrow') || event.code === 'Space'
+        ? event.code
+        : event.key.toLowerCase();
+      if (!turtleKeys.has(key)) return;
+      event.preventDefault();
+      pressedKeys.add(key);
+    });
+    window.addEventListener('keyup', (event) => {
+      const key = event.code.startsWith('Arrow') || event.code === 'Space'
+        ? event.code
+        : event.key.toLowerCase();
+      pressedKeys.delete(key);
+      if (key === 'Space') drawing = false;
+    });
+    window.addEventListener('blur', () => {
+      pressedKeys.clear();
+      drawing = false;
+    });
+
+    function processHandFrame(result) {
+      const hand = result.landmarks?.[0];
+      if (!hand) {
+        drawing = false;
+        gesturePinched = false;
+        cursorPoint = null;
+        handCursor.style.display = 'none';
+        gestureStatus.textContent = 'Show one hand to the camera. The blue cursor follows your index finger; pinch to draw.';
+        return;
+      }
+
+      const thumb = hand[4];
+      const index = hand[8];
+      const wrist = hand[0];
+      const middleBase = hand[9];
+      const pinchDistance = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+      const palmScale = Math.max(0.001, Math.hypot(wrist.x - middleBase.x, wrist.y - middleBase.y));
+      const pinchRatio = pinchDistance / palmScale;
+      const pinched = gesturePinched ? pinchRatio < 0.5 : pinchRatio < 0.32;
+      gesturePinched = pinched;
+
+      const rawPoint = {
+        x: (1 - index.x) * canvas.width,
+        y: index.y * canvas.height
+      };
+      const point = cursorPoint
+        ? { x: cursorPoint.x * 0.65 + rawPoint.x * 0.35,
+            y: cursorPoint.y * 0.65 + rawPoint.y * 0.35 }
+        : rawPoint;
+      cursorPoint = point;
+      handCursor.style.display = 'block';
+      handCursor.style.left = `${(point.x / canvas.width) * 100}%`;
+      handCursor.style.top = `${(point.y / canvas.height) * 100}%`;
+
+      if (!pinched || !target || won) {
+        drawing = false;
+        gestureStatus.textContent = 'Pinch thumb and index finger to draw; release to lift the pen.';
+        return;
+      }
+
+      if (!drawing) {
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y);
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        drawing = true;
+      } else {
+        ctx.lineTo(point.x, point.y);
+        ctx.stroke();
+      }
+      hasDrawing = true;
+      gestureStatus.textContent = 'Drawing — release your pinch to lift the pen.';
+      schedulePrediction();
+    }
+
+    function detectHandFrame(now) {
+      if (!cameraStream) return;
+      if (cameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+          && cameraVideo.currentTime !== lastVideoTime
+          && now - lastDetectionAt >= 45) {
+        lastVideoTime = cameraVideo.currentTime;
+        lastDetectionAt = now;
+        try {
+          processHandFrame(handLandmarker.detectForVideo(cameraVideo, now));
+        } catch (error) {
+          statusNode.textContent = `Hand tracking stopped: ${error.message}`;
+          statusNode.classList.add('error');
+          stopCamera();
+          cameraButton.textContent = 'Start Level 2 camera';
+          return;
+        }
+      }
+      cameraFrame = requestAnimationFrame(detectHandFrame);
+    }
+
+    async function startCamera() {
+      cameraButton.disabled = true;
+      statusNode.classList.remove('error');
+      statusNode.textContent = 'Starting the camera and hand tracker…';
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Camera access is unavailable. Open the game on localhost or HTTPS.');
+        }
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'user' }, width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+        if (levelLocked || level !== 2) {
+          stopCamera();
+          return;
+        }
+        cameraVideo.srcObject = cameraStream;
+        cameraVideo.hidden = false;
+        await cameraVideo.play();
+        if (levelLocked || level !== 2) {
+          stopCamera();
+          return;
+        }
+
+        if (!handLandmarker) {
+          const visionPackage = await import(
+            'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs'
+          );
+          const vision = await visionPackage.FilesetResolver.forVisionTasks(
+            'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm'
+          );
+          handLandmarker = await visionPackage.HandLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+              delegate: 'CPU'
+            },
+            runningMode: 'VIDEO',
+            numHands: 1,
+            minHandDetectionConfidence: 0.55,
+            minHandPresenceConfidence: 0.55,
+            minTrackingConfidence: 0.5
+          });
+        }
+        lastVideoTime = -1;
+        lastDetectionAt = 0;
+        cameraButton.textContent = 'Stop camera';
+        gestureStatus.textContent = 'The blue cursor follows your index finger. Pinch to draw.';
+        statusNode.textContent = 'Level 2 active. Pinch to draw and release to lift the pen.';
+        cameraFrame = requestAnimationFrame(detectHandFrame);
+      } catch (error) {
+        stopCamera();
+        cameraButton.textContent = 'Start Level 2 camera';
+        statusNode.textContent = error.message || 'Could not start the camera hand tracker.';
+        statusNode.classList.add('error');
+      } finally {
+        cameraButton.disabled = levelLocked;
+      }
+    }
+
+    cameraButton.addEventListener('click', () => {
+      if (cameraStream) {
+        stopCamera();
+        cameraButton.textContent = 'Start Level 2 camera';
+        gestureStatus.textContent = 'Camera stopped. Start it again to continue Level 2.';
+        statusNode.textContent = 'Camera stopped.';
+      } else {
+        startCamera();
+      }
+    });
+
+    async function predict({ final = false } = {}) {
+      if (!target || !hasDrawing || (levelLocked && !final) || (won && !final)) return null;
       const thisRequest = ++requestNumber;
-      statusNode.textContent = 'The AI is looking at your doodle…';
+      if (!final) statusNode.textContent = 'The AI is looking at your doodle…';
       try {
         const response = await fetch('/api/predict', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ target, image: canvas.toDataURL('image/png') })
+          body: JSON.stringify({ target, level, image: canvas.toDataURL('image/png') })
         });
         const result = await response.json();
-        if (thisRequest !== requestNumber) return;
+        if (thisRequest !== requestNumber) return null;
         if (!response.ok) throw new Error(result.error || 'Prediction failed');
         guessNode.textContent = `${result.guess} (${(result.guess_probability * 100).toFixed(1)}%)`;
         scoreNode.textContent = `${(result.score * 100).toFixed(1)}%`;
         resultHintNode.textContent = `Your score is the model's probability for ${target}.`;
-        statusNode.textContent = `AI guessed ${result.guess}; ${target} confidence is ${(result.score * 100).toFixed(1)}%.`;
+        latestScore = result.score;
+        latestGuess = result.guess;
+        if (!final && level === 3 && result.score >= 0.90) {
+          won = true;
+          levelLocked = true;
+          stopLevelTimer();
+          stopKeyboardControl();
+          clearButton.disabled = true;
+          newRoundButton.disabled = true;
+          showLevelResult('You win!', `You reached the 90% Level 3 score needed to win.`, `Hexagon score: ${(result.score * 100).toFixed(1)}%`, 'Play again', makeRound);
+        } else if (!final) {
+          statusNode.textContent = `AI guessed ${result.guess}; Hexagon score is ${(result.score * 100).toFixed(1)}%.`;
+        }
+        return result.score;
       } catch (error) {
-        if (thisRequest !== requestNumber) return;
+        if (thisRequest !== requestNumber) return null;
         statusNode.textContent = error.message;
         statusNode.classList.add('error');
+        return null;
       }
     }
 
@@ -190,9 +816,15 @@
 
     clearButton.addEventListener('click', () => {
       clearCanvas();
-      statusNode.textContent = target ? `Canvas cleared. Draw a ${target}.` : 'Canvas cleared. Choose a category to begin.';
+      statusNode.textContent = target
+        ? level === 1 ? `Canvas cleared. Draw a ${target}.`
+          : level === 2 ? `Canvas cleared. Pinch to draw a ${target}.`
+            : `Canvas cleared. Use WASD or arrow keys; hold Space to draw ${target}.`
+        : 'Canvas cleared. Choose Hexagon to begin.';
     });
     newRoundButton.addEventListener('click', makeRound);
+    gameOverNewRound.addEventListener('click', makeRound);
+    levelResultAction.addEventListener('click', () => resultAction?.());
 
     fetch('/api/categories')
       .then((response) => response.json().then((result) => ({ response, result })))
@@ -200,6 +832,7 @@
         if (!response.ok) throw new Error(result.error || 'Could not load categories');
         categories = result.categories;
         if (categories.length < 3) throw new Error('Train a model with at least three categories to play.');
+        if (!categories.includes('hexagon')) throw new Error('The trained model must include the hexagon category.');
         makeRound();
       })
       .catch((error) => {

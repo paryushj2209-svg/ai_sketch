@@ -35,6 +35,20 @@ def make_handler(predictor: DoodlePredictor) -> type[BaseHTTPRequestHandler]:
 
         def do_GET(self) -> None:
             route = urlparse(self.path).path
+            if route == "/assets/race-car-cursor.png":
+                asset = PAGE.parent / "assets" / "race-car-cursor.png"
+                try:
+                    body = asset.read_bytes()
+                except OSError as exc:
+                    self._send_json(500, {"error": f"Could not load cursor image: {exc}"})
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "public, max-age=86400")
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if route == "/api/categories":
                 self._send_json(200, {"categories": predictor.classes})
                 return
