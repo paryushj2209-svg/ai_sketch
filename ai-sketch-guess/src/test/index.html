@@ -21,10 +21,10 @@
     .network-node { fill: #8beaff; filter: drop-shadow(0 0 5px #42dfff); transform-box: fill-box; transform-origin: center; animation: node-pulse 4.8s ease-in-out infinite; }
     .network-node.violet { fill: #b29aff; filter: drop-shadow(0 0 6px #9c7bff); animation-delay: -2s; }
     .network-node:nth-child(3n) { animation-delay: -3.2s; }
-    main { position: relative; z-index: 1; width: min(100%, 1030px); margin: auto; }
+    main { position: relative; z-index: 1; width: min(100%, 1240px); margin: auto; }
     h1 { margin: 0 0 7px; color: #f3f7ff; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.055em; text-shadow: 0 0 32px #42d9ff55; }
     .intro { margin: 0 0 24px; color: #9baec9; }
-    .layout { display: grid; grid-template-columns: minmax(0, 540px) minmax(240px, 1fr); gap: 20px; align-items: start; }
+    .layout { display: grid; grid-template-columns: minmax(0, 680px) minmax(260px, 1fr); gap: 24px; align-items: start; }
     .panel { position: relative; overflow: hidden; background: linear-gradient(145deg, #111b2dF2, #0b1220F5); border: 1px solid #263c5a; border-radius: 18px; padding: 20px; box-shadow: 0 18px 54px #0008, inset 0 1px #ffffff0b; }
     .panel::before { position: absolute; top: 0; left: 22px; width: 90px; height: 2px; content: ''; background: linear-gradient(90deg, #38dfff, #9b7cff, transparent); box-shadow: 0 0 18px #38dfff99; }
     .panel::after { position: absolute; top: 12px; right: 15px; width: 75px; height: 42px; content: ''; opacity: .32; pointer-events: none; background: radial-gradient(circle at 10% 20%, #45e5ff 0 2px, transparent 3px), radial-gradient(circle at 50% 50%, #9a85ff 0 2px, transparent 3px), radial-gradient(circle at 90% 20%, #45e5ff 0 2px, transparent 3px), radial-gradient(circle at 28% 90%, #9a85ff 0 2px, transparent 3px), linear-gradient(25deg, transparent 47%, #42dfff 48% 49%, transparent 50%), linear-gradient(-25deg, transparent 47%, #9a85ff 48% 49%, transparent 50%); }
@@ -65,6 +65,8 @@
     .result-label { display: block; color: #8ea6c4; font-family: 'DM Mono', monospace; font-size: .76rem; }
     .guess { margin: 5px 0 16px; color: #eaf2ff; font-size: 1.28rem; font-weight: 750; }
     .score { margin: 4px 0 0; color: #65e2ff; font-family: 'DM Mono', monospace; font-size: 2rem; font-weight: 800; text-shadow: 0 0 20px #46dfff44; }
+    .brain-animation { display: block; width: min(100%, 500px); height: 210px; margin: 24px 0 0 auto; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 22px #3dcbff30); }
+    .data-centre-animation { position: fixed; right: 16px; bottom: 8px; z-index: 0; display: block; width: 230px; height: 220px; opacity: .3; filter: drop-shadow(0 0 28px #42dfff44); pointer-events: none; }
     .error { color: #ff8795; }
     .bomb-explosion { position: absolute; z-index: 4; display: none; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle, #fff8a7 0 12%, #ffbb35 22%, #ff532e 46%, #e51a5d 66%, transparent 72%); box-shadow: 0 0 28px 12px #ff542e99; transform: translate(-50%, -50%); pointer-events: none; }
     .bomb-explosion::before, .bomb-explosion::after { position: absolute; inset: -5px; content: ''; border: 3px solid #ffd76a; border-radius: 50%; animation: blast-ring .75s cubic-bezier(.1,.6,.2,1) both; }
@@ -79,7 +81,8 @@
     @keyframes network-drift { from { transform: translate3d(-8px, 4px, 0) scale(.98); } to { transform: translate3d(12px, -8px, 0) scale(1.02); } }
     @keyframes node-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: .95; transform: scale(1.3); } }
     @media (prefers-reduced-motion: reduce) { .network-drift, .network-node { animation: none !important; } }
-    @media (max-width: 720px) { body { padding: 22px 12px 32px; } .layout { grid-template-columns: 1fr; } .panel { padding: 15px; } }
+    @media (max-width: 1020px) { .layout { grid-template-columns: 1fr; } .canvas-wrap { max-width: 680px; margin-inline: auto; } }
+    @media (max-width: 720px) { body { padding: 22px 12px 32px; } .panel { padding: 15px; } .brain-animation { height: 2100px; margin-top: 14px; } }
   </style>
 </head>
 <body>
@@ -102,6 +105,7 @@
       </g>
     </g>
   </svg>
+  <dotlottie-wc class="data-centre-animation" src="/assets/data-centre.lottie" autoplay loop aria-hidden="true"></dotlottie-wc>
   <main>
     <h1 class="animate__animated animate__fadeInDown">Doodle Guess</h1>
     <p class="intro">Draw a Hexagon in three 30-second levels: mouse, camera pinch, then keyboard controls.</p>
@@ -157,6 +161,7 @@
           <span class="result-label">Probability your drawing matches <span id="target-name">Hexagon</span></span>
           <p id="score" class="score">—</p>
         </div>
+        <dotlottie-wc class="brain-animation" src="/assets/brain-network.lottie" autoplay loop aria-hidden="true"></dotlottie-wc>
       </aside>
     </div>
   </main>
@@ -352,7 +357,7 @@
     }
 
     function createHiddenBombs() {
-      const count = 15 + Math.floor(randomUnit() * 11);
+      const count = 6;
       const safeFromStart = 72;
       const bombs = [];
       let attempts = 0;
@@ -872,5 +877,6 @@
 
     clearCanvas();
   </script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-wc@0.9.28/dist/dotlottie-wc.js"></script>
 </body>
 </html>
