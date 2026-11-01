@@ -29,12 +29,12 @@
     .panel::before { position: absolute; top: 0; left: 22px; width: 90px; height: 2px; content: ''; background: linear-gradient(90deg, #38dfff, #9b7cff, transparent); box-shadow: 0 0 18px #38dfff99; }
     .panel::after { position: absolute; top: 12px; right: 15px; width: 75px; height: 42px; content: ''; opacity: .32; pointer-events: none; background: radial-gradient(circle at 10% 20%, #45e5ff 0 2px, transparent 3px), radial-gradient(circle at 50% 50%, #9a85ff 0 2px, transparent 3px), radial-gradient(circle at 90% 20%, #45e5ff 0 2px, transparent 3px), radial-gradient(circle at 28% 90%, #9a85ff 0 2px, transparent 3px), linear-gradient(25deg, transparent 47%, #42dfff 48% 49%, transparent 50%), linear-gradient(-25deg, transparent 47%, #9a85ff 48% 49%, transparent 50%); }
     h2 { margin: 0 0 15px; color: #dfe9ff; font-size: 1rem; letter-spacing: .02em; }
-    .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
     .level-info { margin: 0 0 12px; padding: 11px 13px; border: 1px solid #263f63; border-radius: 10px; background: #10203a; color: #7edfff; font-size: .9rem; font-weight: 700; }
+    .target-card { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 13px 15px; border: 1px solid #35537a; border-radius: 12px; background: linear-gradient(110deg, #101d31, #14213b); box-shadow: inset 0 0 18px #4b91ff0a; }
+    .target-caption { color: #94aac6; font-family: 'DM Mono', monospace; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; }
+    .target-name { color: #82edff; font-size: 1.25rem; font-weight: 700; text-shadow: 0 0 20px #48dfff55; }
+    .target-card.target-reveal { animation: target-reveal .45s cubic-bezier(.2,.8,.2,1) both; }
     .timer { margin: -3px 0 13px; color: #ffcc70; font-family: 'DM Mono', monospace; font-size: 1rem; font-weight: 500; text-shadow: 0 0 18px #ffad4355; }
-    .choice { min-height: 46px; border: 1px solid #354b6b; border-radius: 10px; background: #111d30; color: #eaf2ff; font: inherit; font-weight: 650; cursor: pointer; transition: border-color .2s, background .2s, box-shadow .2s, transform .2s; }
-    .choice:hover { transform: translateY(-2px); border-color: #4bdfff; box-shadow: 0 0 18px #35d9ff22; }
-    .choice.selected { border-color: #51e2ff; background: #103145; color: #8cf0ff; box-shadow: inset 0 0 0 1px #51e2ff, 0 0 22px #35d9ff22; }
     .canvas-wrap { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #466589; border-radius: 12px; background: white; box-shadow: 0 0 0 4px #111d30, 0 0 30px #37d9ff17; touch-action: none; }
     canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
     .turtle-cursor { position: absolute; z-index: 1; width: 68px; height: 68px; display: none; object-fit: contain; transform: translate(-50%, -50%) rotate(0deg); transition: transform 90ms linear; pointer-events: none; }
@@ -78,6 +78,7 @@
     @keyframes hit-shake { 0%,100% { translate: 0 0; } 20% { translate: -7px 2px; } 40% { translate: 6px -2px; } 60% { translate: -4px -1px; } 80% { translate: 3px 1px; } }
     @keyframes overlay-arrive { from { opacity: 0; } to { opacity: 1; } }
     @keyframes card-arrive { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes target-reveal { from { opacity: .4; transform: translateY(5px); border-color: #64e8ff; } to { opacity: 1; transform: translateY(0); border-color: #35537a; } }
     @keyframes network-drift { from { transform: translate3d(-8px, 4px, 0) scale(.98); } to { transform: translate3d(12px, -8px, 0) scale(1.02); } }
     @keyframes node-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: .95; transform: scale(1.3); } }
     @media (prefers-reduced-motion: reduce) { .network-drift, .network-node { animation: none !important; } }
@@ -108,13 +109,16 @@
   <dotlottie-wc class="data-centre-animation" src="/assets/data-centre.lottie" autoplay loop aria-hidden="true"></dotlottie-wc>
   <main>
     <h1 class="animate__animated animate__fadeInDown">Doodle Guess</h1>
-    <p class="intro">Draw a Hexagon in three 30-second levels: mouse, camera pinch, then keyboard controls.</p>
+    <p class="intro">The AI picks a new random drawing for each 30-second level.</p>
     <div class="layout">
       <section class="panel animate__animated animate__fadeInUp">
-        <h2>What will you draw?</h2>
+        <h2>Your AI-picked target</h2>
         <p id="level-info" class="level-info">Level 1 — draw with your mouse.</p>
         <p id="timer" class="timer" aria-live="off" hidden>Time left: 30s</p>
-        <div id="choices" class="choices" aria-label="Choose Hexagon"></div>
+        <div id="target-card" class="target-card" aria-live="polite">
+          <span class="target-caption">Draw this</span>
+          <strong id="target-prompt" class="target-name">Waiting for the model…</strong>
+        </div>
         <div id="camera-controls" class="camera-controls" hidden>
           <div class="camera-row">
             <video id="camera-preview" class="camera-preview" autoplay playsinline muted aria-hidden="true" tabindex="-1"></video>
@@ -154,11 +158,11 @@
       </section>
       <aside class="panel animate__animated animate__fadeInUp animate__delay-1s">
         <h2>AI result</h2>
-        <p id="result-hint" class="hint">Choose Hexagon and start drawing. The AI checks your sketch after you pause.</p>
+        <p id="result-hint" class="hint">The AI selects a random category for each level and checks your sketch as you draw.</p>
         <div class="result" aria-live="polite">
           <span class="result-label">AI's best guess</span>
           <p id="guess" class="guess">—</p>
-          <span class="result-label">Probability your drawing matches <span id="target-name">Hexagon</span></span>
+          <span class="result-label">Probability your drawing matches <span id="target-name">the current target</span></span>
           <p id="score" class="score">—</p>
         </div>
         <dotlottie-wc class="brain-animation" src="/assets/brain-network.lottie" autoplay loop aria-hidden="true"></dotlottie-wc>
@@ -168,7 +172,8 @@
   <script type="module">
     const canvas = document.querySelector('#canvas');
     const ctx = canvas.getContext('2d');
-    const choicesNode = document.querySelector('#choices');
+    const targetPrompt = document.querySelector('#target-prompt');
+    const targetCard = document.querySelector('#target-card');
     const statusNode = document.querySelector('#status');
     const guessNode = document.querySelector('#guess');
     const scoreNode = document.querySelector('#score');
@@ -194,7 +199,7 @@
     const levelResultAction = document.querySelector('#level-result-action');
     const timerNode = document.querySelector('#timer');
     let categories = [];
-    let options = [];
+    let targetsThisRound = new Set();
     let target = null;
     let level = 1;
     let won = false;
@@ -233,8 +238,32 @@
           : 'Level 3 — use WASD or arrow keys; hold Space to draw. Score 90% to win.';
       document.querySelector('#level-info').textContent = text;
       resultHintNode.textContent = target
-        ? `Draw a ${target}; you have 30 seconds for Level ${level}.`
-        : 'Choose Hexagon and start drawing.';
+        ? `Draw a ${displayCategory(target)}; you have 30 seconds for Level ${level}.`
+        : 'The AI will choose a random category.';
+    }
+
+    function displayCategory(category) {
+      return category.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+    }
+
+    function chooseRandomTarget() {
+      let choices = categories.filter((category) => !targetsThisRound.has(category));
+      if (choices.length === 0) {
+        targetsThisRound.clear();
+        choices = [...categories];
+      }
+      return choices[Math.floor(Math.random() * choices.length)];
+    }
+
+    function setRandomTarget() {
+      target = chooseRandomTarget();
+      targetsThisRound.add(target);
+      const displayName = displayCategory(target);
+      targetPrompt.textContent = displayName;
+      targetNameNode.textContent = displayName;
+      targetCard.classList.remove('target-reveal');
+      void targetCard.offsetWidth;
+      targetCard.classList.add('target-reveal');
     }
 
     function stopLevelTimer() {
@@ -287,7 +316,7 @@
       cameraButton.disabled = true;
 
       levelResultTitle.textContent = "Time's up";
-      levelResultCopy.textContent = 'Calculating your final Hexagon score…';
+      levelResultCopy.textContent = `Calculating your final ${displayCategory(target)} score…`;
       levelResultScore.textContent = '…';
       levelResultAction.textContent = 'Please wait';
       levelResultAction.disabled = true;
@@ -303,7 +332,7 @@
         latestGuess = null;
       }
       const scoreText = `${(score * 100).toFixed(1)}%`;
-      levelResultScore.textContent = `Hexagon score: ${scoreText}`;
+      levelResultScore.textContent = `${displayCategory(target)} score: ${scoreText}`;
 
       if (level === 3 && score >= 0.90) {
         won = true;
@@ -454,6 +483,7 @@
       levelLocked = true;
       gameOver = false;
       bombs = [];
+      targetsThisRound.clear();
       bombExplosion.classList.remove('active');
       canvasWrap.classList.remove('hit-shake');
       gameOverOverlay.hidden = true;
@@ -464,34 +494,11 @@
       keyboardControls.hidden = true;
       cameraButton.disabled = false;
       cameraButton.textContent = 'Start Level 2 camera';
-      options = ['hexagon'];
-      target = null;
-      choicesNode.replaceChildren(...options.map((category) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'choice';
-        button.textContent = category.charAt(0).toUpperCase() + category.slice(1);
-        button.addEventListener('click', () => selectTarget(category, button));
-        return button;
-      }));
-      targetNameNode.textContent = 'Hexagon';
+      setRandomTarget();
       clearCanvas();
       statusNode.classList.remove('error');
-      statusNode.textContent = 'Select Hexagon to start the 30-second timer.';
+      statusNode.textContent = `Level 1 target: ${displayCategory(target)}. Draw before time runs out.`;
       updateLevelInfo();
-    }
-
-    function selectTarget(category, selectedButton) {
-      target = category;
-      won = false;
-      levelLocked = false;
-      choicesNode.querySelectorAll('.choice').forEach((button) => button.classList.remove('selected'));
-      selectedButton.classList.add('selected');
-      selectedButton.disabled = true;
-      targetNameNode.textContent = category;
-      clearCanvas();
-      statusNode.classList.remove('error');
-      statusNode.textContent = `Draw a ${category} on the canvas.`;
       startLevelTimer();
     }
 
@@ -505,15 +512,16 @@
       cameraButton.disabled = false;
       cameraControls.hidden = level !== 2;
       keyboardControls.hidden = level !== 3;
+      setRandomTarget();
       clearCanvas();
       updateLevelInfo();
 
       if (level === 2) {
-        statusNode.textContent = `Level 2 started. Pinch to draw ${target}.`;
+        statusNode.textContent = `Level 2 target: ${displayCategory(target)}. Pinch to draw.`;
         startLevelTimer();
         startCamera();
       } else if (level === 3) {
-        statusNode.textContent = `Level 3 started. Draw ${target} and score at least 90% to win.`;
+        statusNode.textContent = `Level 3 target: ${displayCategory(target)}. Score at least 90% to win.`;
         startKeyboardControl();
         startLevelTimer();
       }
@@ -532,7 +540,7 @@
 
     canvas.addEventListener('pointerdown', (event) => {
       if (level !== 1 || won || levelLocked) return;
-      if (!target) { statusNode.textContent = 'Select a category before drawing.'; return; }
+      if (!target) { statusNode.textContent = 'Waiting for the AI to choose a target.'; return; }
       drawing = true;
       canvas.setPointerCapture(event.pointerId);
       const point = pointFromEvent(event);
@@ -830,9 +838,9 @@
           stopKeyboardControl();
           clearButton.disabled = true;
           newRoundButton.disabled = true;
-          showLevelResult('You win!', `You reached the 90% Level 3 score needed to win.`, `Hexagon score: ${(result.score * 100).toFixed(1)}%`, 'Play again', makeRound);
+          showLevelResult('You win!', 'You reached the 90% Level 3 score needed to win.', `${displayCategory(target)} score: ${(result.score * 100).toFixed(1)}%`, 'Play again', makeRound);
         } else if (!final) {
-          statusNode.textContent = `AI guessed ${result.guess}; Hexagon score is ${(result.score * 100).toFixed(1)}%.`;
+          statusNode.textContent = `AI guessed ${result.guess}; ${displayCategory(target)} score is ${(result.score * 100).toFixed(1)}%.`;
         }
         return result.score;
       } catch (error) {
@@ -852,10 +860,10 @@
     clearButton.addEventListener('click', () => {
       clearCanvas();
       statusNode.textContent = target
-        ? level === 1 ? `Canvas cleared. Draw a ${target}.`
-          : level === 2 ? `Canvas cleared. Pinch to draw a ${target}.`
-            : `Canvas cleared. Use WASD or arrow keys; hold Space to draw ${target}.`
-        : 'Canvas cleared. Choose Hexagon to begin.';
+        ? level === 1 ? `Canvas cleared. Draw a ${displayCategory(target)}.`
+          : level === 2 ? `Canvas cleared. Pinch to draw a ${displayCategory(target)}.`
+            : `Canvas cleared. Use WASD or arrow keys; hold Space to draw ${displayCategory(target)}.`
+        : 'Canvas cleared. The AI will choose a target.';
     });
     newRoundButton.addEventListener('click', makeRound);
     gameOverNewRound.addEventListener('click', makeRound);
@@ -867,7 +875,6 @@
         if (!response.ok) throw new Error(result.error || 'Could not load categories');
         categories = result.categories;
         if (categories.length < 3) throw new Error('Train a model with at least three categories to play.');
-        if (!categories.includes('hexagon')) throw new Error('The trained model must include the hexagon category.');
         makeRound();
       })
       .catch((error) => {
