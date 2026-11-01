@@ -11,8 +11,16 @@
   <style>
     :root { color-scheme: dark; font-family: 'Space Grotesk', system-ui, sans-serif; color: #eaf2ff; background: #070b14; }
     * { box-sizing: border-box; }
-    body { position: relative; min-height: 100vh; margin: 0; padding: 34px 18px 48px; background: radial-gradient(ellipse at 50% -20%, #132647 0, #0b1221 43%, #070b14 78%); }
+    body { position: relative; min-height: 100vh; margin: 0; padding: 34px 18px 48px; background: radial-gradient(ellipse at 14% 12%, #142b4c 0, transparent 36%), radial-gradient(ellipse at 88% 66%, #17143d 0, transparent 38%), linear-gradient(145deg, #08101e, #070b14 58%, #0a0d1c); }
     body::before { position: fixed; z-index: 0; inset: 0; content: ''; opacity: .23; pointer-events: none; background-image: radial-gradient(circle at center, #39d9ff 1px, transparent 1.5px), linear-gradient(#263a59 1px, transparent 1px), linear-gradient(90deg, #263a59 1px, transparent 1px); background-size: 58px 58px, 58px 58px, 58px 58px; mask-image: linear-gradient(to bottom, #000, transparent 90%); }
+    .neural-backdrop { position: fixed; z-index: 0; inset: 0; width: 100%; height: 100%; overflow: visible; opacity: .56; pointer-events: none; mask-image: radial-gradient(ellipse at center, transparent 5%, #000 62%); }
+    .network-lines { fill: none; stroke: #50ccff; stroke-width: 1.2; stroke-opacity: .28; }
+    .network-lines.secondary { stroke: #a88aff; stroke-opacity: .25; }
+    .network-drift { transform-box: fill-box; transform-origin: center; animation: network-drift 24s ease-in-out infinite alternate; }
+    .network-drift.reverse { animation-duration: 31s; animation-direction: alternate-reverse; }
+    .network-node { fill: #8beaff; filter: drop-shadow(0 0 5px #42dfff); transform-box: fill-box; transform-origin: center; animation: node-pulse 4.8s ease-in-out infinite; }
+    .network-node.violet { fill: #b29aff; filter: drop-shadow(0 0 6px #9c7bff); animation-delay: -2s; }
+    .network-node:nth-child(3n) { animation-delay: -3.2s; }
     main { position: relative; z-index: 1; width: min(100%, 1030px); margin: auto; }
     h1 { margin: 0 0 7px; color: #f3f7ff; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.055em; text-shadow: 0 0 32px #42d9ff55; }
     .intro { margin: 0 0 24px; color: #9baec9; }
@@ -68,10 +76,32 @@
     @keyframes hit-shake { 0%,100% { translate: 0 0; } 20% { translate: -7px 2px; } 40% { translate: 6px -2px; } 60% { translate: -4px -1px; } 80% { translate: 3px 1px; } }
     @keyframes overlay-arrive { from { opacity: 0; } to { opacity: 1; } }
     @keyframes card-arrive { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes network-drift { from { transform: translate3d(-8px, 4px, 0) scale(.98); } to { transform: translate3d(12px, -8px, 0) scale(1.02); } }
+    @keyframes node-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: .95; transform: scale(1.3); } }
+    @media (prefers-reduced-motion: reduce) { .network-drift, .network-node { animation: none !important; } }
     @media (max-width: 720px) { body { padding: 22px 12px 32px; } .layout { grid-template-columns: 1fr; } .panel { padding: 15px; } }
   </style>
 </head>
 <body>
+  <svg class="neural-backdrop" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+    <g class="network-drift">
+      <path class="network-lines" d="M18 120 128 184 248 132 370 208 454 148 M18 120 72 286 198 300 248 132 M72 286 26 432 160 492 198 300 312 410 370 208 454 362 M26 432 94 632 216 590 312 410 404 548 454 362 M94 632 44 804 180 748 216 590 344 724 404 548 454 362 M1020 104 1122 190 1242 126 1388 214 M1122 190 1072 336 1218 376 1242 126 1362 470 1388 214 M1072 336 1024 520 1168 566 1218 376 1362 470 M1024 520 1084 716 1210 676 1168 566 1362 470 1404 728 M1084 716 1210 676 1300 826 1404 728"/>
+      <path class="network-lines secondary" d="M18 120 198 300 160 492 312 410 216 590 344 724 M370 208 312 410 404 548 454 362 M1020 104 1218 376 1168 566 1210 676 1300 826 M1242 126 1218 376 1362 470 1210 676"/>
+      <g>
+        <circle class="network-node" cx="18" cy="120" r="3"/><circle class="network-node violet" cx="128" cy="184" r="2.5"/><circle class="network-node" cx="248" cy="132" r="4"/><circle class="network-node violet" cx="370" cy="208" r="3"/><circle class="network-node" cx="454" cy="148" r="2.5"/>
+        <circle class="network-node violet" cx="72" cy="286" r="3"/><circle class="network-node" cx="198" cy="300" r="4"/><circle class="network-node violet" cx="26" cy="432" r="2.5"/><circle class="network-node" cx="160" cy="492" r="3.5"/><circle class="network-node violet" cx="312" cy="410" r="3"/>
+        <circle class="network-node" cx="94" cy="632" r="3"/><circle class="network-node violet" cx="216" cy="590" r="4"/><circle class="network-node" cx="404" cy="548" r="2.5"/><circle class="network-node violet" cx="44" cy="804" r="3"/><circle class="network-node" cx="180" cy="748" r="3.5"/><circle class="network-node violet" cx="344" cy="724" r="3"/>
+      </g>
+    </g>
+    <g class="network-drift reverse">
+      <path class="network-lines" d="M1020 104 1122 190 1242 126 1388 214 M1122 190 1072 336 1218 376 1242 126 1362 470 1388 214 M1072 336 1024 520 1168 566 1218 376 1362 470 M1024 520 1084 716 1210 676 1168 566 1362 470 1404 728 M1084 716 1210 676 1300 826 1404 728"/>
+      <g>
+        <circle class="network-node" cx="1020" cy="104" r="3"/><circle class="network-node violet" cx="1122" cy="190" r="4"/><circle class="network-node" cx="1242" cy="126" r="2.5"/><circle class="network-node violet" cx="1388" cy="214" r="3"/><circle class="network-node" cx="1072" cy="336" r="3.5"/>
+        <circle class="network-node violet" cx="1218" cy="376" r="4"/><circle class="network-node" cx="1362" cy="470" r="3"/><circle class="network-node violet" cx="1024" cy="520" r="2.5"/><circle class="network-node" cx="1168" cy="566" r="3.5"/><circle class="network-node violet" cx="1084" cy="716" r="3"/>
+        <circle class="network-node" cx="1210" cy="676" r="4"/><circle class="network-node violet" cx="1300" cy="826" r="2.5"/><circle class="network-node" cx="1404" cy="728" r="3.5"/>
+      </g>
+    </g>
+  </svg>
   <main>
     <h1 class="animate__animated animate__fadeInDown">Doodle Guess</h1>
     <p class="intro">Draw a Hexagon in three 30-second levels: mouse, camera pinch, then keyboard controls.</p>
